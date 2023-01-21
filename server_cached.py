@@ -15,7 +15,7 @@ class Response_running(BaseModel):
 
 class Response_ready(BaseModel):
     status: str = "Ready"
-    result: list = []
+    result: dict = {}
 
 
 class Request(BaseModel):
@@ -24,7 +24,7 @@ class Request(BaseModel):
 
 app = FastAPI()
 request = Request()
-response_result = []
+response_result = {}
 r = redis.Redis()
 domains = []
 counts = {}
@@ -35,7 +35,7 @@ async def counter():
         domain = urlparse(i).netloc
         if domain in domains:
             counts[domain] += 1
-            print(f"{domain} was here {counts[domain]} times")
+            print(f"\n{domain} was here {counts[domain]} times")
         else:
             domains.append(domain)
             counts[domain] = 1
@@ -58,7 +58,7 @@ async def collecting():
     async with aiohttp.ClientSession() as session:
         for i in request.urls:
             async with session.get(i) as resp:
-                response_result.append(resp.status)
+                response_result[i] = resp.status
 
 
 @app.get("/api/v1/tasks/{data}",
@@ -66,11 +66,11 @@ async def collecting():
 async def tasks(data: str):
     await collecting()
     global response_result
-    if response_result == []:
-        return Response_running(id=uuid.uuid4())
+    if response_result == {}:
+        return Response_running(id=None)
     else:
         res = response_result
-        response_result = []
+        response_result = {}
         return Response_ready(result=res)
 
 
